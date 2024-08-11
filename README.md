@@ -1,52 +1,111 @@
-# Poetry Template
+# mtp4py
 
-[![Test and build](https://github.com/ImperialCollegeLondon/poetry_template_2/actions/workflows/ci.yml/badge.svg)](https://github.com/ImperialCollegeLondon/poetry_template_2/actions/workflows/ci.yml)
+[Memont Tensor Potentials (MLIP-2)](https://gitlab.com/ashapeev/mlip-2.git)
+is wrapped for python.
+The code developd by [pymtp](https://github.com/hlyang1992/pymtp.git) is further wraped
+to improve the utility by python.
+Appropriate citations for above repos are required to use.
 
-This is a minimal Python 3.12 application that uses [poetry](https://python-poetry.org) for packaging and dependency management. It also provides [pre-commit](https://pre-commit.com/) hooks (for [ruff](https://pypi.org/project/ruff/) and [mypy](https://mypy.readthedocs.io/en/stable/)) and automated tests using [pytest](https://pytest.org/) and [GitHub Actions](https://github.com/features/actions). Pre-commit hooks are automatically kept updated with a dedicated GitHub Action, this can be removed and replace with [pre-commit.ci](https://pre-commit.ci) if using an public repo. It was developed by the [Imperial College Research Computing Service](https://www.imperial.ac.uk/admin-services/ict/self-service/research-support/rcs/).
+## Training
 
-## Usage
+```python
+from pymtp.core import MTPCalactor
+from pymtp.core import PyConfiguration
+from ase.io import read
 
-To use this repository as a template for your own application:
+calc = CalculatorMtp4Py("pot")
+atoms = read("POSCAR")
 
-1. [Download and install Poetry](https://python-poetry.org/docs/#installation) following the instructions for your OS.
-2. Click the green "Use this template" button above
-3. Name and create your repository
-4. Clone your new repository and make it your working directory
-5. Replace instances of `myproject` with your own application name. Edit:
-   - `pyproject.toml`
-   - `tests/test_myproject.py`
-   - Rename `myproject` directory
-6. Set up the virtual environment:
+atoms.calc = calc
 
-   ```bash
-   poetry install
-   ```
+print(atoms.get_potential_energy())
+print(atoms.get_forces())
+print(atoms.get_stress())
+```
 
-7. Activate the virtual environment (alternatively, ensure any python-related command is preceded by `poetry run`):
+## Inferences
 
-   ```bash
-   poetry shell
-   ```
+```python
+from pymtp.core import MTPCalactor
+from pymtp.core import PyConfiguration
+from ase.io import read
 
-8. Install the git hooks:
+calc = CalculatorMtp4Py("path_to_pot_file")
+atoms = read("path_to_POSCAR")
 
-   ```bash
-   pre-commit install
-   ```
+atoms.calc = calc
 
-9. Run the main app:
+print(atoms.get_potential_energy())
+print(atoms.get_forces())
+print(atoms.get_stress())
+```
 
-   ```bash
-   python -m myproject
-   ```
+## Features
 
-10. Run the tests:
+This usage of ASE calculator is essential to run MD using ASE.
+Not essential but training / dataset building can be also managed by python environment.
 
-    ```bash
-    pytest
-    ```
+## Requirement
 
-### Publishing
+[Memont Tensor Potentials](https://gitlab.com/ashapeev/mlip-2.git).
+This repo is not compatible with [mlip-3](https://gitlab.com/ashapeev/mlip-3.git),
+so be careful.
 
-The GitHub workflow includes an action to publish on release.
-To run this action, uncomment the commented portion of `publish.yml`, and modify the steps for the desired behaviour (ie. publishing a Docker image, publishing to PyPI, deploying documentation etc.)
+## Installation
+
+First, clone this repo.
+
+```bash
+git clone https://github.com/tsuyama1990/mtp.git
+```
+
+### MLIP-2
+
+If you do not have [MLIP-2](https://gitlab.com/ashapeev/mlip-2.git)
+clone it in any path.
+For the installation pls follow
+[README in MLIP-2](https://gitlab.com/ashapeev/mlip-2.git).
+
+* g++, gcc, gfortran, mpicxx
+* Alterlatively: the same set for Intel compilers (tested with the 2017 version)
+* make
+are necessary to compile MLIP.
+
+For executables, you need to make
+
+* mlp (make mlp)
+* libinterface (make libinterface)
+are essential at leaset.
+
+### Set configuration
+
+[json files Path and compiler](libsetter.json) needs to be set.
+
+* MLIP_LIB : path to the mlip2 directory
+* MLIP_DIR" : "path to the lib_mlip_interface.a file
+* CC : C compiler, e.g. 'gcc-11', 'icpc'
+* CXX" : C++ compiler e.g. 'g++-11', 'icpc'
+
+### Setup
+
+After this, go ahead installtion.
+2 stesps
+
+```bash
+cd <go to this repo>
+bash startup_local.sh
+```
+
+```bash
+cd <go to this repo> / pytmp
+poetry run python setup.py
+```
+
+## Author
+
+* Tomoyuki Tsuyama
+* <tomoyuki.tsuyaman@gmail.com>
+
+## License
+
+"mtp4py" is under [MIT license](https://en.wikipedia.org/wiki/MIT_License).
