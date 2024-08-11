@@ -9,18 +9,16 @@ Appropriate citations for above repos are required to use.
 ## Training
 
 ```python
-from pymtp.core import MTPCalactor
-from pymtp.core import PyConfiguration
-from ase.io import read
+from src.training import MtpTraining
 
-calc = CalculatorMtp4Py("pot")
-atoms = read("POSCAR")
+mtp_path = repo_path / "mlip_2"
+setting_path = mtp_path / "MTP_templates/06.almtp" # Path to the config file for train
+exe_path = mtp_path / "bin/mlp" # Path to executable
+cfg_path = repo_path / "src/example/test.cfg" # Path to the training dataset
+output_path = repo_path / f"src/example/pot.almtp" # Path for odel parameter
 
-atoms.calc = calc
-
-print(atoms.get_potential_energy())
-print(atoms.get_forces())
-print(atoms.get_stress())
+mtp = MtpTraining(setting_path, exe_path, cfg_path, output_path)
+mtp.run()
 ```
 
 ## Inferences
