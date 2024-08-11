@@ -81,8 +81,8 @@ are essential at leaset.
 
 [json files Path and compiler](libsetter.json) needs to be set.
 
-* MLIP_LIB : path to the mlip2 directory
-* MLIP_DIR" : "path to the lib_mlip_interface.a file
+* MLIP_DIR : path to the mlip2 directory
+* MLIP_LIB" : "path to the lib_mlip_interface.a file
 * CC : C compiler, e.g. 'gcc-11', 'icpc'
 * CXX" : C++ compiler e.g. 'g++-11', 'icpc'
 
@@ -93,8 +93,10 @@ After this, go ahead installtion.
 
 ```bash
 cd <go to this repo>
-bash startup_local.sh
+source startup_local.sh
 ```
+
+* USE SOURCE not bash
 
 ```bash
 cd <go to this repo> / pytmp
