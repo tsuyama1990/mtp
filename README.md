@@ -9,35 +9,45 @@ Appropriate citations for above repos are required to use.
 ## Training
 
 ```python
-from pymtp.core import MTPCalactor
-from pymtp.core import PyConfiguration
-from ase.io import read
+from src.training import MtpTraining
 
-calc = CalculatorMtp4Py("pot")
-atoms = read("POSCAR")
+mtp_path = repo_path / "mlip_2"
+setting_path = mtp_path / "MTP_templates/06.almtp" # Path to the config file for train
+exe_path = mtp_path / "bin/mlp" # Path to executable
+cfg_path = repo_path / "src/example/test.cfg" # Path to the training dataset
+output_path = repo_path / f"src/example/pot.almtp" # Path for odel parameter
 
-atoms.calc = calc
-
-print(atoms.get_potential_energy())
-print(atoms.get_forces())
-print(atoms.get_stress())
+mtp = MtpTraining(setting_path, exe_path, cfg_path, output_path)
+mtp.run()
 ```
 
 ## Inferences
 
 ```python
-from pymtp.core import MTPCalactor
-from pymtp.core import PyConfiguration
+from src.ase_calculator_mtp import AseCalculatorMtp
 from ase.io import read
+from ase.optimize import FIRE
+from ase.md.nvtberendsen import NVTBerendsen
+from ase import units
 
 calc = CalculatorMtp4Py("path_to_pot_file")
 atoms = read("path_to_POSCAR")
 
 atoms.calc = calc
 
+# single point
 print(atoms.get_potential_energy())
 print(atoms.get_forces())
 print(atoms.get_stress())
+
+# optimization
+opt = FIRE(atoms, logfile="./log.traj")
+opt.run()
+
+# MD, room temperature simulation (300K, 0.1 fs time step)
+dyn = NVTBerendsen(atoms, 0.1 * units.fs, 300, taut=0.5*1000*units.fs)
+num_steps = 1000
+dyn.run(num_steps)
 ```
 
 ## Features
@@ -71,18 +81,19 @@ For the installation pls follow
 * make
 are necessary to compile MLIP.
 
-For executables, you need to make
+For executables, you need to make below.
 
 * mlp (make mlp)
 * libinterface (make libinterface)
+
 are essential at leaset.
 
 ### Set configuration
 
-[json files Path and compiler](libsetter.json) needs to be set.
+Edit [json files to set paths and compilers](libsetter.json).
 
 * MLIP_DIR : path to the mlip2 directory
-* MLIP_LIB" : "path to the lib_mlip_interface.a file
+* MLIP_LIB : "path to the lib_mlip_interface.a file
 * CC : C compiler, e.g. 'gcc-11', 'icpc'
 * CXX" : C++ compiler e.g. 'g++-11', 'icpc'
 
@@ -96,12 +107,14 @@ cd <go to this repo>
 source startup_local.sh
 ```
 
-* USE SOURCE not bash
+***USE SOURCE not BASH***
 
 ```bash
 cd <go to this repo> / pytmp
-poetry run python setup.py
+poetry run python setup.py install
 ```
+
+This process is necessary because pyproject.toml cannot handle cython.
 
 ## Author
 
