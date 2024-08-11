@@ -26,18 +26,30 @@ print(atoms.get_stress())
 ## Inferences
 
 ```python
-from pymtp.core import MTPCalactor
-from pymtp.core import PyConfiguration
+from src.ase_calculator_mtp import AseCalculatorMtp
 from ase.io import read
+from ase.optimize import FIRE
+from ase.md.nvtberendsen import NVTBerendsen
+from ase import units
 
 calc = CalculatorMtp4Py("path_to_pot_file")
 atoms = read("path_to_POSCAR")
 
 atoms.calc = calc
 
+# single point
 print(atoms.get_potential_energy())
 print(atoms.get_forces())
 print(atoms.get_stress())
+
+# optimization
+opt = FIRE(atoms, logfile="./log.traj")
+opt.run()
+
+# MD, room temperature simulation (300K, 0.1 fs time step)
+dyn = NVTBerendsen(atoms, 0.1 * units.fs, 300, taut=0.5*1000*units.fs)
+num_steps = 1000
+dyn.run(num_steps)
 ```
 
 ## Features
