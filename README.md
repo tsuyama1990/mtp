@@ -93,8 +93,10 @@ After this, go ahead installtion.
 
 ```bash
 cd <go to this repo>
-bash startup_local.sh
+source startup_local.sh
 ```
+
+* USE SOURCE not bash
 
 ```bash
 cd <go to this repo> / pytmp
