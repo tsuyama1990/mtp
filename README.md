@@ -71,18 +71,19 @@ For the installation pls follow
 * make
 are necessary to compile MLIP.
 
-For executables, you need to make
+For executables, you need to make below.
 
 * mlp (make mlp)
 * libinterface (make libinterface)
+
 are essential at leaset.
 
 ### Set configuration
 
-[json files Path and compiler](libsetter.json) needs to be set.
+Edit [json files to set paths and compilers](libsetter.json).
 
 * MLIP_DIR : path to the mlip2 directory
-* MLIP_LIB" : "path to the lib_mlip_interface.a file
+* MLIP_LIB : "path to the lib_mlip_interface.a file
 * CC : C compiler, e.g. 'gcc-11', 'icpc'
 * CXX" : C++ compiler e.g. 'g++-11', 'icpc'
 
@@ -96,12 +97,14 @@ cd <go to this repo>
 source startup_local.sh
 ```
 
-* USE SOURCE not bash
+***USE SOURCE not BASH***
 
 ```bash
 cd <go to this repo> / pytmp
-poetry run python setup.py
+poetry run python setup.py install
 ```
+
+This process is necessary because pyproject.toml cannot handle cython.
 
 ## Author
 
