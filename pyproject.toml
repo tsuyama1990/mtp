@@ -66,9 +66,3 @@ pydocstyle.convention = "google"
 profile = "black"
 line_length = 80
 multi_line_output = 4
-
-[tool.poetry.scripts]
-build = "pymtp.build:main"
-
-[tool.setuptools]
-py-modules = ["pymtp"]
