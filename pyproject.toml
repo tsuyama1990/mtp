@@ -66,3 +66,6 @@ pydocstyle.convention = "google"
 profile = "black"
 line_length = 80
 multi_line_output = 4
+
+[tool.setuptools]
+py-modules = ["pymtp2"]
