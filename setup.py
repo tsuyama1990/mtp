@@ -15,7 +15,7 @@ from setuptools.extension import Extension
 
 current = Path(__file__).resolve()
 repo_level = next(
-    i for i in range(len(current.parents)) if current.parents[i].name == "mtp"
+    i for i in range(len(current.parents)) if current.parents[i].name == "mtp4py"
 )
 repo_path = current.parents[repo_level]
 json_file_path = repo_path / "libsetter.json"
@@ -51,7 +51,7 @@ current = Path(__file__).resolve().parent
 ext_modules = [
     Extension(
         "pymtp.core._mtp",
-        sources=[f"{current}/core/_mtp.cpp"],
+        sources=["pymtp/core/_mtp.cpp"],
         include_dirs=[np.get_include(), *mlip_include_dir],
         extra_objects=[MLIP_LIB],
         extra_compile_args=["-std=c++11"],
@@ -64,10 +64,9 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 version = "1.0"
 setup(
-    version=version,
     cmdclass={"build_ext": build_ext},
     ext_modules=ext_modules,
     packages=find_packages(exclude=["docs", "tests"]),
-    install_requires=["numpy"],
-    extras_require={"all": ["ase"]},
+    # install_requires=["numpy"],
+    # extras_require={"all": ["ase"]},
 )
