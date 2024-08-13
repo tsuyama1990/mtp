@@ -50,5 +50,5 @@ class AseCalculatorMtp(Calculator):
         self.pymtp_calc.calc(mtp_atoms)
 
         self.results["energy"] = mtp_atoms.energy
-        self.results["forces"] = mtp_atoms.forces
-        self.results["stress"] = mtp_atoms.stress
+        self.results["forces"] = mtp_atoms.force
+        self.results["stress"] = mtp_atoms.stresses

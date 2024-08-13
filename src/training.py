@@ -20,7 +20,6 @@ class MtpTraining:
         cfg_path: Path,
         output_path: Path,
         iter_limit: int = 100,
-        al_mode: str = "nbh",
     ):
         """Initialize the MtpTraining object.
 
@@ -36,12 +35,10 @@ class MtpTraining:
             Path where the output will be saved.
         iter_limit : int, optional
             Limit on the number of iterations, by default 100.
-        al_mode : str, optional
-            Active learning mode, by default "nbh".
         """
         output_path.parent.mkdir(exist_ok=True, parents=True)
         self.command = self.build_command(
-            setting_path, exe_path, cfg_path, output_path, iter_limit, al_mode
+            setting_path, exe_path, cfg_path, output_path, iter_limit
         )
 
     def build_command(
@@ -51,7 +48,6 @@ class MtpTraining:
         cfg_path: Path,
         output_path: Path,
         iter_limit: int,
-        al_mode: str,
     ) -> str:
         """Build the command string to run the training executable.
 
@@ -67,8 +63,6 @@ class MtpTraining:
             Path where the output will be saved.
         iter_limit : int
             Limit on the number of iterations.
-        al_mode : str
-            Active learning mode.
 
         Returns:
         -------
@@ -80,9 +74,8 @@ class MtpTraining:
             "train",
             str(setting_path),
             str(cfg_path),
-            f"--save_to={output_path}",
-            f"--iteration_limit={iter_limit}",
-            f"--al_mode={al_mode}",
+            f"--trained-pot-name={output_path}",
+            f"--max-iter={iter_limit}",
         ]
         return " ".join(command)
 

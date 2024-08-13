@@ -8,7 +8,7 @@ from ase.calculators.singlepoint import SinglePointCalculator
 from ase.cell import Cell
 
 
-def atoms2cfg(atoms, file, unique_elements, append=False):
+def atoms2cfg(atoms, file, append=False):
     """Write the atomic configuration to a .cfg file.
 
     Parameters
@@ -17,8 +17,6 @@ def atoms2cfg(atoms, file, unique_elements, append=False):
         The atomic configuration.
     file : str
         The file path to write the configuration to.
-    unique_elements : list of str
-        List of unique elements in the system.
     append : bool, optional
         If True, append to the existing file. If False, create a new file.
     """
@@ -37,7 +35,7 @@ def atoms2cfg(atoms, file, unique_elements, append=False):
         f.write(" Supercell\n")
         cell = atoms.get_cell()
         for i in range(3):
-            f.write(f"{cell[i][0]:<9}{cell[i][1]}      {cell[i][2]}\n")
+            f.write(f"  {cell[i][0]:<9}      {cell[i][1]:<9}      {cell[i][2]:<9}\n")
 
         try:
             fs = atoms.get_forces()
@@ -78,7 +76,7 @@ def atoms2cfg(atoms, file, unique_elements, append=False):
 
         if write_stress:
             f.write(
-                "PlusStress:  xx        yy        zz        yz        xz        xy\n"
+                " PlusStress:  xx        yy        zz        yz        xz        xy\n"
             )
             f.write(
                 f"{stress[0]:.5f}    {stress[1]:.5f}    {stress[2]:.5f}    "
@@ -89,7 +87,7 @@ def atoms2cfg(atoms, file, unique_elements, append=False):
         f.write("\n")
 
 
-def cfg2atoms(file, symbols):
+def cfg2atoms(file, symbols=None):
     """Read and parse the CFG file to extract energy, forces, and stress.
 
     Parameters
@@ -108,9 +106,9 @@ def cfg2atoms(file, symbols):
         lines = f.read()
 
     block_pattern = re.compile("BEGIN_CFG\n(.*?)\nEND_CFG", re.S)
-    lattice_pattern = re.compile("SuperCell\n(.*?)\n AtomData", re.S | re.I)
+    lattice_pattern = re.compile(" SuperCell\n(.*?)\n AtomData", re.S | re.I)
     position_pattern = re.compile("fz\n(.*?)\n Energy", re.S)
-    energy_pattern = re.compile("Energy\n(.*?)\n (?=PlusStress|Stress)", re.S)
+    energy_pattern = re.compile(" Energy\n(.*?)\n (?=PlusStress|Stress)", re.S)
     stress_pattern = re.compile("xy\n(.*?)(?=\n|$)", re.S)
 
     def formatify(string):
@@ -124,7 +122,11 @@ def cfg2atoms(file, symbols):
 
         position_str = position_pattern.findall(block)[0]
         position = np.array(list(map(formatify, position_str.split("\n"))))
-        chemical_symbols = [symbols[int(ind)] for ind in position[:, 1].astype(int)]
+        if symbols is not None:
+            chemical_symbols = [symbols[int(ind)] for ind in position[:, 1].astype(int)]
+        else:
+            chemical_symbols = Atoms(position[:, 1].astype(int)).numbers
+
         forces = position[:, 5:8]
         positions = position[:, 2:5]
 
