@@ -23,35 +23,44 @@ json_file_path = repo_path / "libsetter.json"
 with open(json_file_path) as json_file:
     data = json.load(json_file)
 
-# Extract compiler settings
-cc_compiler = data["compiler"]["CC"]
-cxx_compiler = data["compiler"]["CXX"]
-
 # Set the compiler environment variables
-os.environ["CC"] = cc_compiler
-os.environ["CXX"] = cxx_compiler
+CC = os.environ.get("CC", None)
+CXX = os.environ.get("CXX", None)
+if CC is None:
+    os.environ["CC"] = data["compiler"]["CC"]
+if CXX is None:
+    os.environ["CXX"] = data["compiler"]["CXX"]
 
-environ = os.environ
-MLIP_LIB = environ.get("MLIP_LIB", None)
-MLIP_DIR = environ.get("MLIP_DIR", None)
 
+MLIP_LIB = os.environ.get("MLIP_LIB", None)
+MLIP_DIR = os.environ.get("MLIP_DIR", None)
 
-if MLIP_DIR is None or MLIP_LIB is None:
-    print("can't find MLIP_DIR and MLIP_LIB in environment of system.")
-    sys.exit()
-else:
-    print(f"MLIP_LIB = {MLIP_LIB} \nMLIP_DIR={MLIP_DIR}\n\n")
+if MLIP_DIR is None:
+    path_mlip_dir = Path(data["path_to_mlip2"]["MLIP_DIR"])
+    if path_mlip_dir.exists():
+        MLIP_LIB = str(path_mlip_dir)
+    else:
+        sys.exit()
+
+if MLIP_LIB is None:
+    path_mlip_LIB = Path(data["path_to_mlip2"]["MLIP_LIB"])
+    if path_mlip_LIB.exists():
+        MLIP_LIB = str(path_mlip_LIB)
+    else:
+        sys.exit()
+
+print(f"MLIP_LIB = {MLIP_LIB} \nMLIP_DIR={MLIP_DIR}\n\n")
 
 mlip_include_dir = [
     f"{MLIP_DIR}/src/common",
     f"{MLIP_DIR}/src",
     f"{MLIP_DIR}/dev_src",
 ]
-current = Path(__file__).resolve().parent
+
 ext_modules = [
     Extension(
-        "pymtp.core._mtp",
-        sources=["pymtp/core/_mtp.cpp"],
+        "mtp_cpp2py.core._mtp",
+        sources=["mtp_cpp2py/core/_mtp.cpp"],
         include_dirs=[np.get_include(), *mlip_include_dir],
         extra_objects=[MLIP_LIB],
         extra_compile_args=["-std=c++11"],
@@ -60,13 +69,9 @@ ext_modules = [
     )
 ]
 
-here = os.path.abspath(os.path.dirname(__file__))
-
 version = "1.0"
 setup(
     cmdclass={"build_ext": build_ext},
     ext_modules=ext_modules,
     packages=find_packages(exclude=["docs", "tests"]),
-    # install_requires=["numpy"],
-    # extras_require={"all": ["ase"]},
 )
