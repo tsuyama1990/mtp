@@ -63,10 +63,10 @@ so be careful.
 
 ## Installation
 
-First, clone this repo.
+First, clone [this repo](https://github.com/tsuyama1990/mtp4py).
 
 ```bash
-git clone https://github.com/tsuyama1990/mtp.git
+git clone https://github.com/tsuyama1990/mtp4py.git
 ```
 
 ### MLIP-2
@@ -93,28 +93,28 @@ are essential at leaset.
 Edit [json files to set paths and compilers](libsetter.json).
 
 * MLIP_DIR : path to the mlip2 directory
-* MLIP_LIB : "path to the lib_mlip_interface.a file
+* MLIP_LIB : path to the lib_mlip_interface.a file (usually path to mlip-2/lib/lib_mlip_interface.a)
 * CC : C compiler, e.g. 'gcc-11', 'icpc'
 * CXX" : C++ compiler e.g. 'g++-11', 'icpc'
 
 ### Setup
 
-After this, go ahead installtion.
-2 stesps
+2 stesps for installation.
+To wrap cpp using cython, both pyproject.toml & setup.py are used for installation.
+
+#### Setup pyproject.toml
 
 ```bash
 cd <go to this repo>
 source startup_local.sh
 ```
 
-***USE SOURCE not BASH***
+#### install mtp_cpp2py using cython
 
 ```bash
-cd <go to this repo> / pytmp
-poetry run python setup.py install
+cd <go to this repo>
+poetry run python -m pip install .
 ```
-
-This process is necessary because pyproject.toml cannot handle cython.
 
 ## Author
 
