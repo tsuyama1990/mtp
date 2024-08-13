@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "MTP"
+name = "mtp4py"
 version = "0.1.0"
 description = "moment tensor potentials optimized for ase calculator"
 authors = ["TOMO <umma.shikka@gmail.com>"]
@@ -69,9 +69,5 @@ line_length = 80
 multi_line_output = 4
 
 [project]
-name = "mtpcpp"
-version = "0.0.1"
-dependencies = [
-   "numpy",
-   "ase"
-]
+name = "mtp4py"
+version = "0.1.0"
