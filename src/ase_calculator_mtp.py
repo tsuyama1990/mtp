@@ -2,7 +2,7 @@
 
 from ase.calculators.calculator import Calculator, all_changes
 
-from pymtp.core import MTPCalactor, PyConfiguration
+from mtp_cpp2py.core import MTPCalactor, PyConfiguration
 
 ALL_CHANGES = tuple(all_changes)
 
