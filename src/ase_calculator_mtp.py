@@ -1,6 +1,7 @@
 """Define Calculator for MTP."""
 
 from ase.calculators.calculator import Calculator, all_changes
+
 from mtp_cpp2py.core import MTPCalactor, PyConfiguration
 
 ALL_CHANGES = tuple(all_changes)
