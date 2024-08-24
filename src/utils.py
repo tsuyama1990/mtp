@@ -4,27 +4,53 @@ import re
 
 import numpy as np
 from ase import Atom, Atoms
+from ase.calculators.lj import LennardJones
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.cell import Cell
 
 
-def atoms2cfg(atoms, file, append=False):
+def atoms2cfg(atoms, file, bool_delta_learing=False, append=False):
     """Write the atomic configuration to a .cfg file.
 
     Parameters
     ----------
     atoms : ase.Atoms
-        The atomic configuration.
+        The atomic configuration to write to the file.
     file : str
-        The file path to write the configuration to.
+        The file path where the configuration will be written.
+    bool_delta_learing : bool, optional
+        If True, calculate and write energy and forces
+            subtracting Lennard-Jones potential as a first approximation.
+        If False, standard energy and forces are calculated. Default is False.
     append : bool, optional
-        If True, append to the existing file. If False, create a new file.
+        If True, append to the existing file.
+        If False, overwrite the file. Default is False.
+
+    Returns:
+    -------
+    None
+        This function does not return any value.
+
+    Raises:
+    ------
+    Exception
+        If there are issues with the potential energy, forces, or stress calculations.
+
     """
     write_f, write_e, write_stress = True, True, True
     mode = "a" if append else "w"
+
+    if bool_delta_learing:
+        lj_atoms = atoms.copy()
+        lj_atoms.calc = LennardJones()
+
     with open(file, mode) as f:
         try:
-            e = atoms.get_potential_energy()
+            if bool_delta_learing:
+                e = atoms.get_potential_energy()
+            else:
+                e = atoms.get_potential_energy() - lj_atoms.get_potential_energy()
+
         except Exception:
             write_e = False
 
@@ -38,7 +64,10 @@ def atoms2cfg(atoms, file, append=False):
             f.write(f"  {cell[i][0]:<9}      {cell[i][1]:<9}      {cell[i][2]:<9}\n")
 
         try:
-            fs = atoms.get_forces()
+            if bool_delta_learing:
+                forces = atoms.get_forces()
+            else:
+                forces = atoms.get_forces() - lj_atoms.get_forces()
         except Exception:
             write_f = False
 
@@ -57,10 +86,10 @@ def atoms2cfg(atoms, file, append=False):
             atype = Atom(symbols[i]).number
             x, y, z = pos[i]
             if write_f:
-                f_x, f_y, f_z = fs[i]
+                force_x, force_y, force_z = forces[i]
                 f.write(
                     f"{aid:>14}{atype:>5}{x:>16.8f}{y:>16.8f}{z:>16.8f}"
-                    f"{f_x:>12.6f}{f_y:>12.6f}{f_z:>12.6f}\n"
+                    f"{force_x:>12.6f}{force_y:>12.6f}{force_z:>12.6f}\n"
                 )
             else:
                 f.write(f"{aid:>14}{atype:>5}{x:>16.8f}{y:>16.8f}{z:>16.8f}\n")
@@ -70,7 +99,14 @@ def atoms2cfg(atoms, file, append=False):
             f.write(f"{e:16.6f}\n")
 
         try:
-            stress = atoms.get_stress() * -atoms.get_volume()
+            if bool_delta_learing:
+                stress = atoms.get_stress() * -atoms.get_volume()
+            else:
+                stress = (
+                    atoms.get_stress() * -atoms.get_volume()
+                    - lj_atoms.get_stress() * -lj_atoms.get_volume()
+                )
+
         except Exception:
             write_stress = False
 
