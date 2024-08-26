@@ -13,7 +13,7 @@ python = ">=3.9,<4.0"
 numpy = "^2.0.1"
 ase = "^3.23.0"
 
-setuptools = "^72.1.0"
+setuptools = "^73.0.1"
 cython = "^3.0.11"
 pip = "^24.2"
 
