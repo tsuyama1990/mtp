@@ -31,14 +31,14 @@ if CC is None:
 if CXX is None:
     os.environ["CXX"] = data["compiler"]["CXX"]
 
-
 MLIP_LIB = os.environ.get("MLIP_LIB", None)
 MLIP_DIR = os.environ.get("MLIP_DIR", None)
+
 
 if MLIP_DIR is None:
     path_mlip_dir = Path(data["path_to_mlip2"]["MLIP_DIR"])
     if path_mlip_dir.exists():
-        MLIP_LIB = str(path_mlip_dir)
+        MLIP_DIR = str(path_mlip_dir)
     else:
         sys.exit()
 
