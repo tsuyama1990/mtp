@@ -17,6 +17,8 @@ setuptools = "^72.1.0"
 cython = "^3.0.11"
 pip = "^24.2"
 lammps = "^2024.8.29.0.0"
+scikit-learn = "^1.5.1"
+pandas = "^2.2.2"
 
 [tool.poetry.dev-dependencies]
 black = "^24.2.0"
