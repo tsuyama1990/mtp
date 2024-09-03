@@ -96,11 +96,21 @@ class LJTrainer:
             opt_pars += [init_dict_atom_eng[ele] for ele in self.element_list_sorted]
             label = [atoms.get_potential_energy() for atoms in labelled_list_atoms]
 
-            bounds += [(None, 0)] * len(self.element_list_sorted)
+            bounds += [(None, None)] * len(self.element_list_sorted)
+
+            logger.info(
+                f"objective, epsilon:{self.element_list_sorted}, "
+                f"sigma:{self.element_list_sorted}, "
+                f"chempot:{self.element_list_sorted}"
+            )
 
         elif minimized_by == "forces":
             objective_func = self.objective_by_forces
             label = [atoms.get_forces() for atoms in labelled_list_atoms]
+            logger.info(
+                f"objective, epsilon:{self.element_list_sorted}, "
+                f"sigma:{self.element_list_sorted}"
+            )
 
         args = (self.element_list_sorted, labelled_list_atoms, log, label)
         res = minimize(
@@ -185,12 +195,15 @@ class LJTrainer:
         diff = np.array(labelled_engs) - np.array(lj_engs)
         rsme = np.linalg.norm(diff)
 
-        print("(p^o^)p ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ (YoY)//")
-        logger.info(f"objective : {rsme}")
-        logger.info(f"epsilon : {eps}")
-        logger.info(f"sigma : {sigma}")
-        logging.info(f"chempot : {dict_atom_eng}")
-        print("\\\(YoY) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ q(^o^q)")
+        def set_digit(target_dict, num):
+            return {round(float(val), num) for val in target_dict.values()}
+
+        logger.info(
+            f"{rsme:.02f}, "
+            f"{set_digit(eps, 4)}, "
+            f"{set_digit(sigma, 2)}, "
+            f"{set_digit(dict_atom_eng, 3)}"
+        )
 
         return rsme
 
@@ -229,7 +242,7 @@ class LJTrainer:
         lj_calc = LammpsLJBuilder().get_calculator(dict_eps=eps, dict_sigma=sigma)
 
         # set labelled forces
-        labelled_forces = np.array(label)
+        labelled_forces = np.array(label).reshape(1, -1)[0]
         if log:
             labelled_forces = np.sign(labelled_forces) * np.log(
                 np.abs(labelled_forces) + epsilon
@@ -245,16 +258,15 @@ class LJTrainer:
                 )
             lj_forces.append(lj_forces_tmp.tolist())
 
-        lj_forces = np.array(lj_forces).reshape([-1, 1])[0]
+        lj_forces = np.array(lj_forces).reshape(1, -1)[0]
         diff = labelled_forces - lj_forces
 
-        rsme = np.linalg.norm(diff)
+        rsme = np.sum(np.abs(diff))
 
-        print("(p^o^)p ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ (YoY)//")
-        logger.info(f"objective : {rsme}")
-        logger.info(f"epsilon : {eps}")
-        logger.info(f"sigma : {sigma}")
-        print("\\\(YoY) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ q(^o^q)")
+        def set_digit(target_dict, num):
+            return {round(float(val), num) for val in target_dict.values()}
+
+        logger.info(f"{rsme:.02f}, {set_digit(eps, 4)}, {set_digit(sigma, 2)}")
 
         return rsme
 
