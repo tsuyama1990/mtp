@@ -59,6 +59,64 @@ class AseCalculatorMtp(Calculator):
         self.results["stress"] = mtp_atoms.stresses
 
 
+class AseCalculatorMtpDLJ(AseCalculatorMtp):
+    """ASE Calculator interface for a hybrid MTP & LJ.
+
+    This class extends the AseCalculatorMtp class to include the Lennard-Jones potential
+    in addition to MTP. It calculates energy, forces,
+    and stress using a combination of both MTP and LJ potentials.
+    """
+
+    def __init__(self, mtp_path, dict_eps, dict_sigma, **kwargs):
+        """Initialize the hybrid MTP-LJ calculator.
+
+        Parameters
+        ----------
+        mtp_path : pathlike
+            Path to the MTP potential file.
+        dict_eps : dict
+            Dictionary of epsilon values for each element
+            in the Lennard-Jones potential.
+        dict_sigma : dict
+            Dictionary of sigma values for each element in the Lennard-Jones potential.
+        **kwargs
+            Additional keyword arguments for the ASE Calculator.
+        """
+        self.lj_calc = LammpsLJBuilder().get_calculator(
+            dict_eps=dict_eps, dict_sigma=dict_sigma
+        )
+        super().__init__(mtp_path, **kwargs)
+
+    def calculate(
+        self,
+        atoms=None,
+        properties=["energy", "forces", "stress"],
+        system_changes=ALL_CHANGES,
+    ):
+        """Perform the calculation using both MTP and LJ potentials.
+
+        Parameters
+        ----------
+        atoms : ase.Atoms, optional
+            ASE Atoms object for which the calculation is performed.
+        properties : list of str, optional
+            List of properties to calculate. Default is ["energy", "forces", "stress"].
+        system_changes : list of str, optional
+            List of changes in the system. Default is ALL_CHANGES.
+        """
+        super().calculate(atoms, properties, system_changes)
+
+        mtp_atoms = PyConfiguration.from_ase_atoms(atoms)
+        self.pymtp_calc.calc(mtp_atoms)
+
+        lj_atoms = atoms.copy()
+        lj_atoms.calc = self.lj_calc
+
+        self.results["energy"] = mtp_atoms.energy + lj_atoms.calc.get_potential_energy()
+        self.results["forces"] = mtp_atoms.force + lj_atoms.calc.get_forces()
+        self.results["stress"] = mtp_atoms.stresses + lj_atoms.calc.get_stress()
+
+
 class LammpsLJBuilder:
     """A class to generate LAMMPS Lennard-Jones potentials.
 
