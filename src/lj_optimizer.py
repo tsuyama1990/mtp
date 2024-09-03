@@ -1,23 +1,26 @@
 """Optimize LJ potentials."""
 
-from logging import INFO, getLogger
+import logging
 
 import numpy as np
 import pandas as pd
 from ase import Atoms
 from ase.build import sort
-from scipy.optimize import fmin
+from scipy.optimize import minimize
 from sklearn import linear_model
 
 from src.ase_calculator_mtp import LammpsLJBuilder
 
-logger = getLogger(__name__)
-logger.setLevel(INFO)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 class LJTrainer:
     """Trainer class for optimizing Lennard-Jones (LJ) parameters.
 
+    mama
     parameters (epsilon and sigma) are optimized using labelled atomic configurations \
         (either energies or forces).
 
@@ -41,42 +44,84 @@ class LJTrainer:
         """
         self.init_eps_dict = init_eps_dict
         self.init_sigma_dict = init_sigma_dict
-        lj = LammpsLJBuilder(init_eps_dict, init_sigma_dict)
-        self.element_list_sorted, self.ele_num = lj.get_sorted_ele(init_eps_dict.keys())
+        self.element_list_sorted, self.ele_num = LammpsLJBuilder().get_sorted_ele(
+            init_eps_dict.keys()
+        )
 
-    def run_minimize(self, minimized_by, labelled_list_atoms, maxiter=100):
-        """Runs optimization to minimize either energy or forces.
+    def run_minimize(
+        self, labelled_list_atoms, minimized_by="energies", maxiter=1000, log=False
+    ):
+        """Run the optimization of LJ potentials.
+
+        This function optimizes Lennard-Jones (LJ) epsilon and sigma values
+        using either energy or forces as the objective. It supports an optional
+        log scale transformation for the forces during optimization to handle
+        large values.
 
         Parameters:
         ----------
-        minimized_by : str
-            Defines whether the objective is to minimize 'energies' or 'forces'.
         labelled_list_atoms : list of ase.Atoms
             List of labelled Atoms objects with known energies or forces.
+        minimized_by : str, optional, default="energies"
+            Defines the objective for optimization. Choose between:
+            - "energies": Optimize based on potential energies.
+            - "forces": Optimize based on forces.
+        maxiter : int, optional, default=100
+            Maximum number of iterations allowed during the optimization process.
+        log : bool, optional, default=False
+            If True, apply a log scale transformation to forces to prevent large
+            values from dominating the optimization.
+
+        Returns:
+        -------
+        eps : dict
+            Optimized epsilon values for each element.
+        sigma : dict
+            Optimized sigma values for each element.
         """
+        logger.info(
+            f"optimization is performed with {minimized_by}, with log_scale {log}"
+        )
         opt_pars = [self.init_eps_dict[ele] for ele in self.element_list_sorted]
         opt_pars += [self.init_sigma_dict[ele] for ele in self.element_list_sorted]
+
+        bounds = [(0, None)] * len(self.element_list_sorted) + [(1.5, 3.5)] * len(
+            self.element_list_sorted
+        )
 
         if minimized_by == "energies":
             self.build_atom_offset_ds(labelled_list_atoms)
             objective_func = self.objective_by_energy
             init_dict_atom_eng = self.chemipot
-            augment = (
-                self.element_list_sorted,
-                labelled_list_atoms,
-                init_dict_atom_eng,
+            opt_pars += [init_dict_atom_eng[ele] for ele in self.element_list_sorted]
+            label = [atoms.get_potential_energy() for atoms in labelled_list_atoms]
+
+            bounds += [(None, None)] * len(self.element_list_sorted)
+
+            logger.info(
+                f"objective, epsilon:{self.element_list_sorted}, "
+                f"sigma:{self.element_list_sorted}, "
+                f"chempot:{self.element_list_sorted}"
             )
 
         elif minimized_by == "forces":
             objective_func = self.objective_by_forces
-            augment = (
-                self.element_list_sorted,
-                labelled_list_atoms,
+            label = [atoms.get_forces() for atoms in labelled_list_atoms]
+            logger.info(
+                f"objective, epsilon:{self.element_list_sorted}, "
+                f"sigma:{self.element_list_sorted}"
             )
 
-        parameters_optimized = fmin(
-            objective_func, opt_pars, args=augment, maxiter=maxiter
+        args = (self.element_list_sorted, labelled_list_atoms, log, label)
+        res = minimize(
+            objective_func,
+            opt_pars,
+            args=args,
+            bounds=bounds,
+            options={"maxiter": maxiter},
         )
+        parameters_optimized = res.x
+
         logger.info("optimization done")
 
         eps = {}
@@ -88,65 +133,82 @@ class LJTrainer:
         return eps, sigma
 
     @staticmethod
-    def objective_by_energy(
-        opt_paras, unique_atoms, labelled_list_atoms, dict_atom_eng
-    ):
-        """Objective function for LJ.
+    def objective_by_energy(opt_paras, unique_atoms, labelled_list_atoms, log, label):
+        """Objective function for minimizing energy differences.
 
-        to minimizing energy differences between labelled \
-            data and LJ-predicted data.
+        Minimizes the energy differences between labelled data and LJ-predicted data.
 
-        Parameters:
+        Parameters
         ----------
         opt_paras : list of float
-            Optimized epsilon and sigma values.
+            List of optimized epsilon and sigma values.
         unique_atoms : list of str
-            List of unique atom symbols.
+            List of unique atomic symbols.
         labelled_list_atoms : list of ase.Atoms
-            List of labelled Atoms objects with known energies.
-        dict_atom_eng : dict
-            Dictionary of atomic chemical potentials.
+            List of Atoms objects with known energies.
 
         Returns:
         -------
         float
-            Root mean square error (RMSE) between labelled and LJ energies.
+            Root mean square error (RMSE) between labelled and LJ-calculated energies.
         """
-        labelled_eng = []
-        lj_eng = []
-
+        epsilon = 1e-8
+        lj_engs = []
         # build dicts for lammps calculators
         eps = {}
         sigma = {}
+        dict_atom_eng = {}
+
+        # set labelled energy
+        labelled_engs = np.array(label)
+        if log:
+            labelled_engs = np.sign(labelled_engs) * np.log(
+                np.abs(labelled_engs) + epsilon
+            )
+
+        # set dict argss
         for i, ele in enumerate(unique_atoms):
-            eps[ele] = opt_paras[i]
-            sigma[ele] = opt_paras[i + len(unique_atoms)]
+            eps[ele] = float(opt_paras[i])
+            sigma[ele] = float(opt_paras[i + 1 * len(unique_atoms)])
+            dict_atom_eng[ele] = float(opt_paras[i + 2 * len(unique_atoms)])
 
         # lammps calculator
-        lj = LammpsLJBuilder(dict_eps=eps, dict_sigma=sigma)
-        lj_calc = lj.get_calculator()
+        lj_calc = LammpsLJBuilder().get_calculator(dict_eps=eps, dict_sigma=sigma)
+
         for atoms in labelled_list_atoms:
-            labelled_eng.append(atoms.get_potential_energy())
-            atoms.calc = lj_calc
-            eng = atoms.get_potential_energy()
+            _atoms = atoms.copy()
+            _atoms.calc = lj_calc
+            lj_eng = _atoms.get_potential_energy()
+            # offset ~ chemical potential in this case.
             offset = np.array(
                 [
                     dict_atom_eng[ele] * np.sum(atoms.symbols == ele)
                     for ele in dict_atom_eng.keys()
                 ]
             ).sum()
-            lj_eng.append(eng + offset)
-        diff = np.array(labelled_eng) - np.array(lj_eng)
+            lj_eng += offset
+
+            if log:
+                lj_eng = np.sign(lj_eng) * np.log(np.abs(lj_eng) + epsilon)
+            lj_engs.append(lj_eng)
+
+        diff = np.array(labelled_engs) - np.array(lj_engs)
         rsme = np.linalg.norm(diff)
 
-        logger.info(f"objective : {rsme}")
-        logger.info(f"epsilon : {eps}")
-        logger.info(f"sigma : {sigma}")
+        def set_digit(target_dict, num):
+            return {round(float(val), num) for val in target_dict.values()}
+
+        logger.info(
+            f"{rsme:.02f}, "
+            f"{set_digit(eps, 4)}, "
+            f"{set_digit(sigma, 2)}, "
+            f"{set_digit(dict_atom_eng, 3)}"
+        )
 
         return rsme
 
     @staticmethod
-    def objective_by_forces(opt_paras, unique_atoms, labelled_list_atoms):
+    def objective_by_forces(opt_paras, unique_atoms, labelled_list_atoms, log, label):
         """Objective function for LJ.
 
         to minimizing forces differences between labelled \
@@ -166,7 +228,8 @@ class LJTrainer:
         float
             Root mean square error (RMSE) between labelled and LJ forces.
         """
-        diff_forces = []
+        lj_forces = []
+        epsilon = 1e-8
 
         # build dicts for lammps calculators
         eps = {}
@@ -176,21 +239,34 @@ class LJTrainer:
             sigma[ele] = opt_paras[i + len(unique_atoms)]
 
         # lammps calculator
-        lj = LammpsLJBuilder(dict_eps=eps, dict_sigma=sigma)
-        lj_calc = lj.get_calculator()
+        lj_calc = LammpsLJBuilder().get_calculator(dict_eps=eps, dict_sigma=sigma)
+
+        # set labelled forces
+        labelled_forces = np.array(label).reshape(1, -1)[0]
+        if log:
+            labelled_forces = np.sign(labelled_forces) * np.log(
+                np.abs(labelled_forces) + epsilon
+            )
 
         for atoms in labelled_list_atoms:
-            dft_forces = atoms.get_forces()
-            atoms.calc = lj_calc
-            lj_forces = atoms.get_forces()
-            diff_force = dft_forces - lj_forces
-            diff_forces += diff_force.to_list()
-        diff_forces = np.array(diff_forces)
-        rsme = np.linalg.norm(diff_forces)
+            _atoms = atoms.copy()
+            _atoms.calc = lj_calc
+            lj_forces_tmp = _atoms.get_forces()
+            if log:
+                lj_forces_tmp = np.sign(lj_forces_tmp) * np.log(
+                    np.abs(lj_forces_tmp) + epsilon
+                )
+            lj_forces.append(lj_forces_tmp.tolist())
 
-        logger.info(f"objective : {rsme}")
-        logger.info(f"epsilon : {eps}")
-        logger.info(f"sigma : {sigma}")
+        lj_forces = np.array(lj_forces).reshape(1, -1)[0]
+        diff = labelled_forces - lj_forces
+
+        rsme = np.sum(np.abs(diff))
+
+        def set_digit(target_dict, num):
+            return {round(float(val), num) for val in target_dict.values()}
+
+        logger.info(f"{rsme:.02f}, {set_digit(eps, 4)}, {set_digit(sigma, 2)}")
 
         return rsme
 
@@ -209,7 +285,13 @@ class LJTrainer:
             and Atoms object.
         """
         for i, atoms in enumerate(labelled_list_atoms):
-            yield [i, sort(atoms).symbols, atoms.get_potential_energy(), atoms]
+            yield [
+                i,
+                sort(atoms).get_chemical_formula(),
+                sort(atoms).symbols,
+                atoms.get_potential_energy(),
+                atoms,
+            ]
 
     def get_lowest_eng_in_compositions(self, labelled_list_atoms):
         """Returns the lowest energy configuration for each atomic composition.
@@ -226,15 +308,15 @@ class LJTrainer:
         """
         df = pd.DataFrame(
             list(self.atom_ds_builder(labelled_list_atoms)),
-            columns=["compositions", "eng_eV", "Atoms.Obj"],
-            index=0,
+            columns=["id", "chemical_formula", "compositions", "eng_eV", "AtomsObj"],
         )
+        df.set_index("id", drop=True, inplace=True)
 
         def get_mins(df_dummy):
             min_id = df_dummy["eng_eV"].argmin()
-            return df.loc[min_id]
+            return df_dummy.iloc[int(min_id)]
 
-        df_min = df.groupby(by="compositions", as_index=False).apply(get_mins)
+        df_min = df.groupby(by="chemical_formula", as_index=False).apply(get_mins)
         return df_min
 
     def get_atom_num(self, symbols):
@@ -273,7 +355,7 @@ class LJTrainer:
 
         train_x = np.array(train_x)
         regr = linear_model.LinearRegression(fit_intercept=False)
-        regr.fit(train_y, train_x)
+        regr.fit(train_x, train_y)
         self.chemipot = {
             self.element_list_sorted[i]: regr.coef_[i]
             for i in range(len(self.element_list_sorted))

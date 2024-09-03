@@ -67,35 +67,26 @@ class LammpsLJBuilder:
     The parameters for heterogeneous pairs are estimated using
     the Lorentz-Berthelot combining rules.
 
-    Parameters:
-    ----------
-    dict_eps : dict
-        Dictionary mapping element symbols to epsilon values (interaction strength).
-    dict_sigma : dict
-        Dictionary mapping element symbols to sigma values (size of atoms).
     """
 
-    def __init__(self, dict_eps, dict_sigma):
-        """Initializes the LammpsLJBuilder with epsilon and sigma values.
+    def get_calculator(self, dict_eps, dict_sigma):
+        """Builds and returns a LAMMPS calculator.
 
-        Parameters
+        Parameters:
         ----------
         dict_eps : dict
-            Dictionary of epsilon values for elements.
+            Dictionary mapping element symbols to epsilon values (interaction strength).
         dict_sigma : dict
-            Dictionary of sigma values for elements.
-        """
-        self.dict_eps = dict_eps
-        self.dict_sigma = dict_sigma
-
-    def get_calculator(self):
-        """Builds and returns a LAMMPS calculator.
+            Dictionary mapping element symbols to sigma values (size of atoms).
 
         Returns:
         -------
         LAMMPSlib
             A LAMMPS calculator with the defined LJ potential.
         """
+        self.dict_eps = dict_eps
+        self.dict_sigma = dict_sigma
+
         lmpcmds, atom_types = self.build_pair_style()
         lammps_calculator = LAMMPSlib(
             lmpcmds=lmpcmds, atom_types=atom_types, keep_alive=True
