@@ -4,12 +4,11 @@ import re
 
 import numpy as np
 from ase import Atom, Atoms
-from ase.calculators.lj import LennardJones
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.cell import Cell
 
 
-def atoms2cfg(atoms, file, bool_delta_learing=False, append=False):
+def atoms2cfg(atoms, file, bool_delta_learing=False, append=False, lammps_lj_calc=None):
     """Write the atomic configuration to a .cfg file.
 
     Parameters
@@ -25,6 +24,8 @@ def atoms2cfg(atoms, file, bool_delta_learing=False, append=False):
     append : bool, optional
         If True, append to the existing file.
         If False, overwrite the file. Default is False.
+    lammps_lj_calc: ase.calculators
+        Calculator for Lennard Jones, characterised by parameters.
 
     Returns:
     -------
@@ -42,14 +43,14 @@ def atoms2cfg(atoms, file, bool_delta_learing=False, append=False):
 
     if bool_delta_learing:
         lj_atoms = atoms.copy()
-        lj_atoms.calc = LennardJones()
+        lj_atoms.calc = lammps_lj_calc
 
     with open(file, mode) as f:
         try:
             if bool_delta_learing:
-                e = atoms.get_potential_energy()
-            else:
                 e = atoms.get_potential_energy() - lj_atoms.get_potential_energy()
+            else:
+                e = atoms.get_potential_energy()
 
         except Exception:
             write_e = False
@@ -65,9 +66,11 @@ def atoms2cfg(atoms, file, bool_delta_learing=False, append=False):
 
         try:
             if bool_delta_learing:
-                forces = atoms.get_forces()
-            else:
                 forces = atoms.get_forces() - lj_atoms.get_forces()
+
+            else:
+                forces = atoms.get_forces()
+
         except Exception:
             write_f = False
 
@@ -100,12 +103,12 @@ def atoms2cfg(atoms, file, bool_delta_learing=False, append=False):
 
         try:
             if bool_delta_learing:
-                stress = atoms.get_stress() * -atoms.get_volume()
-            else:
                 stress = (
                     atoms.get_stress() * -atoms.get_volume()
                     - lj_atoms.get_stress() * -lj_atoms.get_volume()
                 )
+            else:
+                stress = atoms.get_stress() * -atoms.get_volume()
 
         except Exception:
             write_stress = False
