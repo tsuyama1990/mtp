@@ -33,6 +33,9 @@ pre-commit = "^3.0.4"
 ruff = "^0.4.4"
 ipykernel = "^6.29.4"
 
+[tool.poetry.group.dev.dependencies]
+types-pyyaml = "^6.0.12.20240808"
+
 [tool.mypy]
 disallow_any_explicit = false
 disallow_any_generics = false
@@ -42,8 +45,9 @@ disallow_untyped_defs = false
 exclude = [".venv/"]
 
 [[tool.mypy.overrides]]
-module = "tests.*"
+module = ["tests.*", 'gspread', 'yaml']
 disallow_untyped_defs = false
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-v --mypy -p no:warnings --cov=myproject --cov-report=html --doctest-modules --ignore=myproject/__main__.py"

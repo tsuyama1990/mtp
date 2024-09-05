@@ -4,6 +4,7 @@ import logging
 
 import numpy as np
 import pandas as pd
+import yaml
 from ase import Atoms
 from ase.build import sort
 from scipy.optimize import minimize
@@ -104,8 +105,44 @@ class LJTrainer:
 
         return bounds
 
+    def save_file(self, eps, sigma, chempot, save_to_file):
+        """Save the optimized value on save_to_file argment.
+
+        Parameters:
+        -------
+        eps : dict
+            Optimized epsilon values for each element.
+        sigma : dict
+            Optimized sigma values for each element.
+        chempot : dict
+            Optimized chemical potential values for each element.
+        save_to_file
+            If not None, eps, sigma, and chemical potential values are saved,
+            as a yaml file on this path.
+        """
+        if save_to_file is not None:
+            # Convert tuple keys to string format for human readability
+            eps_str_keys = {f"{k[0]}-{k[1]}": float(v) for k, v in eps.items()}
+            sigma_str_keys = {f"{k[0]}-{k[1]}": float(v) for k, v in sigma.items()}
+            chempot_str_keys = {k: float(v) for k, v in chempot.items()}
+
+            data = {
+                "eps": eps_str_keys,
+                "sigma": sigma_str_keys,
+                "chempot": chempot_str_keys,
+            }
+
+            with open(save_to_file, "w") as yamlfile:
+                yaml.dump(data, yamlfile, default_flow_style=False)
+
     def run_minimize(
-        self, labelled_list_atoms, minimized_by="e", maxiter=1000, log=False, **kwargs
+        self,
+        labelled_list_atoms,
+        minimized_by="e",
+        maxiter=1000,
+        log=False,
+        save_to_file=None,
+        **kwargs,
     ):
         """Runs the optimization of LJ potentials.
 
@@ -120,6 +157,9 @@ class LJTrainer:
             Maximum number of iterations allowed during optimization. Default is 1000.
         log : bool, optional
             If True, apply log scale transformation to forces. Default is False.
+        save_to_file
+            If not None, eps, sigma, and chemical potential values are saved,
+            as a yaml file on this path.
 
         Returns:
         -------
@@ -180,6 +220,7 @@ class LJTrainer:
             options={"maxiter": maxiter},
         )
         parameters_optimized = res.x
+        parameters_optimized = [float(i) for i in parameters_optimized]
 
         logger.info("optimization done")
 
@@ -195,6 +236,8 @@ class LJTrainer:
                     _i + len(self.possible_combo) * 2
                 ]
                 _i += 1
+
+        self.save_file(eps, sigma, chempot, save_to_file)
 
         return eps, sigma, chempot
 
