@@ -122,9 +122,6 @@ class LammpsLJBuilder:
 
     The parameters for homogeneous element pairs are determined
     from the dictionary-type argument.
-    The parameters for heterogeneous pairs are estimated using
-    the Lorentz-Berthelot combining rules.
-
     """
 
     def get_calculator(self, dict_eps, dict_sigma):
@@ -164,7 +161,12 @@ class LammpsLJBuilder:
         dict
             A dictionary mapping element symbols to numerical atom types.
         """
-        element_list_sorted, ele_num = self.get_sorted_ele(self.dict_eps.keys())
+        all_eles = np.array([list(i for i in list(self.dict_eps.keys()))]).reshape(
+            1, -1
+        )[0]
+        unique_eles = list(set(all_eles))
+        element_list_sorted, ele_num = self.get_sorted_ele(unique_eles)
+
         possible_combination_list = self.get_possible_combinations(element_list_sorted)
 
         # Initialize LAMMPS command. Cutoff is set to 3 * max_sigma.
@@ -174,14 +176,8 @@ class LammpsLJBuilder:
         # Adding Pair styles.
         for pair in possible_combination_list:
             # epsilon
-            e1 = self.dict_eps.get(pair[0], 1)
-            e2 = self.dict_eps.get(pair[1], 1)
-            # sigma
-            s1 = self.dict_sigma.get(pair[0], 1)
-            s2 = self.dict_sigma.get(pair[1], 1)
-            # Combine them using Lorentz-Berthelot combining rules.
-            epsilon = np.sqrt(e1 * e2)
-            sigma = (s1 + s2) / 2
+            epsilon = self.dict_eps.get(pair, 1)
+            sigma = self.dict_sigma.get(pair, 1)
             individual_cutoff = sigma * 3
             # Building pair coeff command.
             pair_coeff = (
@@ -227,3 +223,60 @@ class LammpsLJBuilder:
             List of tuples representing possible element pairs.
         """
         return list(combinations_with_replacement(element_list_sorted, 2))
+
+
+class LammpsLJBuilderLB(LammpsLJBuilder):
+    """A class to generate LAMMPS Lennard-Jones potentials.
+
+    The parameters for homogeneous element pairs are determined
+    from the dictionary-type argument.
+    The parameters for heterogeneous pairs are estimated using
+    the Lorentz-Berthelot combining rules.
+
+    """
+
+    def build_pair_style(self):
+        """Constructs LAMMPS pair style commands.
+
+        The commands are being built based on the element types
+        and their epsilon and sigma values.
+
+        Returns:
+        -------
+        list of str
+            LAMMPS commands for setting the LJ potential.
+        dict
+            A dictionary mapping element symbols to numerical atom types.
+        """
+        all_eles = np.array([list(i for i in list(self.dict_eps.keys()))]).reshape(
+            1, -1
+        )[0]
+        unique_eles = list(set(all_eles))
+        element_list_sorted, ele_num = self.get_sorted_ele(unique_eles)
+
+        possible_combination_list = self.get_possible_combinations(element_list_sorted)
+
+        # Initialize LAMMPS command. Cutoff is set to 3 * max_sigma.
+        max_cutoff = max(self.dict_sigma.values())
+        lammps_command = [f"pair_style lj/cut {3 * max_cutoff}"]
+
+        # Adding Pair styles.
+        for pair in possible_combination_list:
+            # epsilon
+            e1 = self.dict_eps.get(pair[0], 1)
+            e2 = self.dict_eps.get(pair[1], 1)
+            # sigma
+            s1 = self.dict_sigma.get(pair[0], 1)
+            s2 = self.dict_sigma.get(pair[1], 1)
+            # Combine them using Lorentz-Berthelot combining rules.
+            epsilon = np.sqrt(e1 * e2)
+            sigma = (s1 + s2) / 2
+            individual_cutoff = sigma * 3
+            # Building pair coeff command.
+            pair_coeff = (
+                f"pair_coeff {ele_num[pair[0]]} {ele_num[pair[1]]} "
+                f"{epsilon} {sigma} {individual_cutoff}"
+            )
+            lammps_command.append(pair_coeff)
+
+        return lammps_command, ele_num
