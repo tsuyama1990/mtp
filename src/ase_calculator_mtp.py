@@ -3,6 +3,7 @@
 from itertools import combinations_with_replacement
 
 import numpy as np
+import yaml
 from ase import Atoms
 from ase.calculators.calculator import Calculator, all_changes
 from ase.calculators.lammpslib import LAMMPSlib
@@ -123,6 +124,30 @@ class LammpsLJBuilder:
     The parameters for homogeneous element pairs are determined
     from the dictionary-type argument.
     """
+
+    @classmethod
+    def get_calculator_from_file(cls, path_to_yaml):
+        """Builds and returns a LAMMPS calculator from yaml file.
+
+        Parameters:
+        ----------
+        save_to_yaml : Pathlike
+            Yaml file containing eps, sigma, and chemical potential values.
+            These values can be optimized by lj_optimizer.py
+
+        Returns:
+        -------
+        LAMMPSlib
+            A LAMMPS calculator with the defined LJ potential.
+        """
+        with open(path_to_yaml) as yamlfile:
+            data = yaml.safe_load(yamlfile)
+
+        # Convert string keys back to tuple keys for eps and sigma
+        eps_tuple_keys = {tuple(k.split("-")): v for k, v in data["eps"].items()}
+        sigma_tuple_keys = {tuple(k.split("-")): v for k, v in data["sigma"].items()}
+
+        return cls().get_calculator(eps_tuple_keys, sigma_tuple_keys)
 
     def get_calculator(self, dict_eps, dict_sigma):
         """Builds and returns a LAMMPS calculator.
