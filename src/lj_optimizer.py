@@ -105,17 +105,19 @@ class LJTrainer:
 
         return bounds
 
-    def save_file(self, eps, sigma, chempot, save_to_file):
+    def save_file(self, eps, sigma, chempot, ele_num, save_to_file):
         """Save the optimized value on save_to_file argment.
 
         Parameters:
         -------
         eps : dict
-            Optimized epsilon values for each element.
+            Optimized epsilon values for each element. e.g. {ele: eps_value}
         sigma : dict
-            Optimized sigma values for each element.
+            Optimized sigma values for each element. e.g. {ele: sigma_value}
         chempot : dict
-            Optimized chemical potential values for each element.
+            Optimized chemical potential values for each element. e.g. {ele: chempot}
+        ele_num : dict
+            Dictionaly making relations of element ID & element, e.g. {ele: ele_id}
         save_to_file
             If not None, eps, sigma, and chemical potential values are saved,
             as a yaml file on this path.
@@ -130,6 +132,7 @@ class LJTrainer:
                 "eps": eps_str_keys,
                 "sigma": sigma_str_keys,
                 "chempot": chempot_str_keys,
+                "element_id": ele_num,
             }
 
             with open(save_to_file, "w") as yamlfile:
@@ -205,7 +208,8 @@ class LJTrainer:
             label = [atoms.get_potential_energy() for atoms in labelled_list_atoms]
             label += [atoms.get_forces() for atoms in labelled_list_atoms]
             logger.info(
-                f"objective, epsilon:{self.possible_combo}, "
+                f"objective: [e, f], "
+                f"epsilon:{self.possible_combo}, "
                 f"sigma:{self.possible_combo}, "
                 f"chempot:{self.possible_combo}"
             )
@@ -237,7 +241,7 @@ class LJTrainer:
                 ]
                 _i += 1
 
-        self.save_file(eps, sigma, chempot, save_to_file)
+        self.save_file(eps, sigma, chempot, self.ele_num, save_to_file)
 
         return eps, sigma, chempot
 
@@ -477,9 +481,10 @@ class LJTrainer:
 
         # Linear Combo of e & f
         obj = e_weight * obj_e + (1 - e_weight) * obj_f
+        obj_component = [round(float(i), 2) for i in [obj_e, obj_f]]
 
         logger.info(
-            f"{obj:.02f}, "
+            f"{obj:.02f}, {obj_component}, "
             f"{set_digit(eps, 4)}, "
             f"{set_digit(sigma, 2)}, "
             f"{set_digit(dict_atom_eng, 3)}"
@@ -678,7 +683,13 @@ class LJTrainerLB(LJTrainer):
         return bounds
 
     def run_minimize(
-        self, labelled_list_atoms, minimized_by="e", maxiter=1000, log=False, **kwargs
+        self,
+        labelled_list_atoms,
+        minimized_by="e",
+        maxiter=1000,
+        log=False,
+        save_to_file=None,
+        **kwargs,
     ):
         """Run the optimization of LJ potentials.
 
@@ -769,6 +780,8 @@ class LJTrainerLB(LJTrainer):
             eps[pair] = parameters_optimized[i]
             sigma[pair] = parameters_optimized[i + len(self.element_list_sorted)]
             chempot[pair] = parameters_optimized[i + len(self.element_list_sorted) * 2]
+
+        self.save_file(eps, sigma, chempot, self.ele_num, save_to_file)
 
         return eps, sigma, chempot
 
@@ -1000,9 +1013,10 @@ class LJTrainerLB(LJTrainer):
 
         # Linear Combo of e & f
         obj = e_weight * obj_e + (1 - e_weight) * obj_f
+        obj_component = [round(float(i), 2) for i in [obj_e, obj_f]]
 
         logger.info(
-            f"{obj:.02f}, "
+            f"{obj:.02f}, {obj_component}, "
             f"{set_digit(eps, 4)}, "
             f"{set_digit(sigma, 2)}, "
             f"{set_digit(dict_atom_eng, 3)}"
