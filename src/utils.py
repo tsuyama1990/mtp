@@ -245,7 +245,7 @@ def get_unique_element_from_db(db_path):
     """
     db = connect(db_path)
     unique_symbols = []
-    for row in db.select:
+    for row in db.select():
         atoms = row.toatoms()
         unique_symbols += list(set(atoms.symbols))
 
