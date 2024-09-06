@@ -150,9 +150,7 @@ def cfg2atoms(file, symbols=None):
     block_pattern = re.compile("BEGIN_CFG\n(.*?)\nEND_CFG", re.S)
     lattice_pattern = re.compile(" SuperCell\n(.*?)\n AtomData", re.S | re.I)
     position_pattern = re.compile("fz\n(.*?)\n Energy", re.S)
-    energy_pattern = re.compile(
-        " Energy\n(.*?)\n (?=PlusStress|Stress|Feature) | Energy\n(.*?)$", re.S
-    )
+    energy_pattern = re.compile(" Energy\n(.*?)\n (?=PlusStress|Stress|Feature)", re.S)
     stress_pattern = re.compile("xy\n(.*?)(?=\n|$)", re.S)
 
     def formatify(string):
