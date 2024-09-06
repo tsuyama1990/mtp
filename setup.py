@@ -34,6 +34,13 @@ if CXX is None:
 MLIP_LIB = os.environ.get("MLIP_LIB", None)
 MLIP_DIR = os.environ.get("MLIP_DIR", None)
 
+src_path = repo_path / "src"
+with open(src_path / "libsetter.py", "w") as f:
+    f.write("# Auto-generated from libsetter.json\n")
+    f.write("data = ")
+    f.write(json.dumps(data, indent=4))  # Write the JSON data as Python dictionary
+    f.write("\n")
+
 
 if MLIP_DIR is None:
     path_mlip_dir = Path(data["path_to_mlip2"]["MLIP_DIR"])
