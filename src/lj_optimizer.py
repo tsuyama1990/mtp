@@ -357,7 +357,7 @@ class LJTrainer:
         lj_calc = LammpsLJBuilder().get_calculator(dict_eps=eps, dict_sigma=sigma)
 
         # set labelled forces
-        labelled_forces = np.array(label).reshape(1, -1)[0]
+        labelled_forces = np.array([item for sublist in label for item in sublist])
         if log:
             labelled_forces = np.sign(labelled_forces) * np.log(
                 np.abs(labelled_forces) + epsilon
@@ -373,7 +373,7 @@ class LJTrainer:
                 )
             lj_forces.append(lj_forces_tmp.tolist())
 
-        lj_forces = np.array(lj_forces).reshape(1, -1)[0]
+        lj_forces = np.array([item for sublist in lj_forces for item in sublist])
         diff = labelled_forces - lj_forces
 
         obj = np.sum(np.abs(diff))
@@ -430,7 +430,10 @@ class LJTrainer:
 
         # set labelled data
         labelled_engs = np.array(label[: len(labelled_list_atoms)])
-        labelled_forces = np.array(label[len(labelled_list_atoms) :]).reshape(1, -1)[0]
+
+        tmp_forces = label[len(labelled_list_atoms) :]
+        labelled_forces = np.array([item for sublist in tmp_forces for item in sublist])
+
         if log:
             labelled_engs = np.sign(labelled_engs) * np.log(
                 np.abs(labelled_engs) + epsilon
@@ -466,7 +469,8 @@ class LJTrainer:
                     np.abs(lj_forces_tmp) + epsilon
                 )
             lj_forces.append(lj_forces_tmp.tolist())
-        lj_forces = np.array(lj_forces).reshape(1, -1)[0]
+
+        lj_forces = np.array([item for sublist in lj_forces for item in sublist])
 
         # Get Obj for Eng.
         diff_e = np.array(labelled_engs) - np.array(lj_engs)
@@ -893,7 +897,7 @@ class LJTrainerLB(LJTrainer):
         lj_calc = LammpsLJBuilderLB().get_calculator(dict_eps=eps, dict_sigma=sigma)
 
         # set labelled forces
-        labelled_forces = np.array(label).reshape(1, -1)[0]
+        labelled_forces = np.array([item for sublist in label for item in sublist])
         if log:
             labelled_forces = np.sign(labelled_forces) * np.log(
                 np.abs(labelled_forces) + epsilon
@@ -909,7 +913,7 @@ class LJTrainerLB(LJTrainer):
                 )
             lj_forces.append(lj_forces_tmp.tolist())
 
-        lj_forces = np.array(lj_forces).reshape(1, -1)[0]
+        lj_forces = np.array([item for sublist in lj_forces for item in sublist])
         diff = labelled_forces - lj_forces
 
         obj = np.sum(np.abs(diff))
@@ -963,7 +967,8 @@ class LJTrainerLB(LJTrainer):
 
         # set labelled data
         labelled_engs = np.array(label[: len(labelled_list_atoms)])
-        labelled_forces = np.array(label[len(labelled_list_atoms) :]).reshape(1, -1)[0]
+        tmp_forces = label[len(labelled_list_atoms) :]
+        labelled_forces = np.array([item for sublist in tmp_forces for item in sublist])
         if log:
             labelled_engs = np.sign(labelled_engs) * np.log(
                 np.abs(labelled_engs) + epsilon
@@ -998,7 +1003,8 @@ class LJTrainerLB(LJTrainer):
                     np.abs(lj_forces_tmp) + epsilon
                 )
             lj_forces.append(lj_forces_tmp.tolist())
-        lj_forces = np.array(lj_forces).reshape(1, -1)[0]
+
+        lj_forces = np.array([item for sublist in lj_forces for item in sublist])
 
         # Get Obj for Eng.
         diff_e = np.array(labelled_engs) - np.array(lj_engs)
