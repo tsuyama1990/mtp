@@ -114,7 +114,7 @@ def atoms2cfg(atoms, file, bool_delta_learing=False, append=False, lammps_lj_cal
                 stress = atoms.get_stress() * -atoms.get_volume()
 
         except Exception:
-            write_stress = False
+            stress = np.array([0, 0, 0, 0, 0, 0])
 
         if write_stress:
             f.write(
@@ -150,7 +150,9 @@ def cfg2atoms(file, symbols=None):
     block_pattern = re.compile("BEGIN_CFG\n(.*?)\nEND_CFG", re.S)
     lattice_pattern = re.compile(" SuperCell\n(.*?)\n AtomData", re.S | re.I)
     position_pattern = re.compile("fz\n(.*?)\n Energy", re.S)
-    energy_pattern = re.compile(" Energy\n(.*?)\n (?=PlusStress|Stress)", re.S)
+    energy_pattern = re.compile(
+        " Energy\n(.*?)\n (?=PlusStress|Stress|Feature) | Energy\n(.*?)$", re.S
+    )
     stress_pattern = re.compile("xy\n(.*?)(?=\n|$)", re.S)
 
     def formatify(string):
