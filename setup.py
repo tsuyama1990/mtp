@@ -36,7 +36,7 @@ MLIP_DIR = os.environ.get("MLIP_DIR", None)
 
 src_path = repo_path / "src"
 with open(src_path / "libsetter.py", "w") as f:
-    f.write("# Auto-generated from libsetter.json\n")
+    f.write('"""# Auto-generated from libsetter.json."""\n\n')
     f.write("data = ")
     f.write(json.dumps(data, indent=4))  # Write the JSON data as Python dictionary
     f.write("\n")
