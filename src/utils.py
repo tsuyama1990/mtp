@@ -4,14 +4,17 @@ import re
 from pathlib import Path
 
 import numpy as np
-from ase import Atom, Atoms
+from ase import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.cell import Cell
+from ase.db import connect
 
 from src import libsetter
 
 
-def atoms2cfg(atoms, file, bool_delta_learing=False, append=False, lammps_lj_calc=None):
+def atoms2cfg(
+    atoms, file, ele_dict, bool_delta_learing=False, append=False, lammps_lj_calc=None
+):
     """Write the atomic configuration to a .cfg file.
 
     Parameters
@@ -89,7 +92,7 @@ def atoms2cfg(atoms, file, bool_delta_learing=False, append=False, lammps_lj_cal
         symbols = atoms.symbols
         for i in range(size):
             aid = i + 1
-            atype = Atom(symbols[i]).number
+            atype = ele_dict[symbols[i]]
             x, y, z = pos[i]
             if write_f:
                 force_x, force_y, force_z = forces[i]
@@ -220,6 +223,37 @@ def get_unique_element_from_cfg(cfg_file_path):
     unique_element = np.array(list(set(unique_symbols)))
     unique_element_sort = np.argsort(Atoms(unique_element).numbers)
     return unique_element_sort.tolist()
+
+
+def get_unique_element_from_db(db_path):
+    """Extract unique atomic elements from a ase_db.
+
+    This function reads atomic configurations from a ase_db, extracts
+    the chemical symbols for all atoms, and returns a sorted list of unique
+    elements present in the dataset.
+
+    Parameters:
+    ----------
+    db_path : Path
+        Path to the ase_db containing atomic configurations.
+
+    Returns:
+    -------
+    list
+        A sorted list of unique atomic elements found in the ase_db,
+        represented by their chemical symbols.
+    """
+    db = connect(db_path)
+    unique_symbols = []
+    for row in db.select:
+        atoms = row.toatoms()
+        unique_symbols += list(set(atoms.symbols))
+
+    unique_symbols = list(set(unique_symbols))
+    sort_index = np.argsort(Atoms(unique_symbols).numbers)
+    unique_list_sorted = list(Atoms(unique_symbols)[sort_index].symbols)
+    ele_num = {ele: idx + 1 for idx, ele in enumerate(unique_list_sorted)}
+    return ele_num
 
 
 def find_mlip_dir():
