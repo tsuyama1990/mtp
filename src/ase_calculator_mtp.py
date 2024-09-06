@@ -68,24 +68,19 @@ class AseCalculatorMtpDLJ(AseCalculatorMtp):
     and stress using a combination of both MTP and LJ potentials.
     """
 
-    def __init__(self, mtp_path, dict_eps, dict_sigma, **kwargs):
+    def __init__(self, mtp_path, lammps_lj_calc, **kwargs):
         """Initialize the hybrid MTP-LJ calculator.
 
         Parameters
         ----------
         mtp_path : pathlike
             Path to the MTP potential file.
-        dict_eps : dict
-            Dictionary of epsilon values for each element
-            in the Lennard-Jones potential.
-        dict_sigma : dict
-            Dictionary of sigma values for each element in the Lennard-Jones potential.
+        lammp_lj_calc : ase.calculators
+            Calculators which is already set by input parameters.
         **kwargs
             Additional keyword arguments for the ASE Calculator.
         """
-        self.lj_calc = LammpsLJBuilder().get_calculator(
-            dict_eps=dict_eps, dict_sigma=dict_sigma
-        )
+        self.lammps_lj_calc = lammps_lj_calc
         super().__init__(mtp_path, **kwargs)
 
     def calculate(
@@ -111,7 +106,7 @@ class AseCalculatorMtpDLJ(AseCalculatorMtp):
         self.pymtp_calc.calc(mtp_atoms)
 
         lj_atoms = atoms.copy()
-        lj_atoms.calc = self.lj_calc
+        lj_atoms.calc = self.lammps_lj_calc
 
         self.results["energy"] = mtp_atoms.energy + lj_atoms.calc.get_potential_energy()
         self.results["forces"] = mtp_atoms.force + lj_atoms.calc.get_forces()
