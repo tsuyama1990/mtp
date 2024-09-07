@@ -1,19 +1,15 @@
 """Methods to improve the utilities."""
 
 import re
-from pathlib import Path
 
 import numpy as np
-from ase import Atoms
+from ase import Atom, Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.cell import Cell
-from ase.db import connect
-
-from src import libsetter
 
 
 def atoms2cfg(
-    atoms, file, ele_dict, bool_delta_learing=False, append=False, lammps_lj_calc=None
+    atoms, file, mindist, bool_delta_learing=False, append=False, lammps_lj_calc=None
 ):
     """Write the atomic configuration to a .cfg file.
 
@@ -92,7 +88,7 @@ def atoms2cfg(
         symbols = atoms.symbols
         for i in range(size):
             aid = i + 1
-            atype = ele_dict[symbols[i]]
+            atype = Atom(symbols[i]).number
             x, y, z = pos[i]
             if write_f:
                 force_x, force_y, force_z = forces[i]
@@ -117,7 +113,7 @@ def atoms2cfg(
                 stress = atoms.get_stress() * -atoms.get_volume()
 
         except Exception:
-            stress = np.array([0, 0, 0, 0, 0, 0])
+            write_stress = False
 
         if write_stress:
             f.write(
@@ -127,6 +123,8 @@ def atoms2cfg(
                 f"{stress[0]:.5f}    {stress[1]:.5f}    {stress[2]:.5f}    "
                 f"{stress[3]:.5f}    {stress[4]:.5f}    {stress[5]:.5f}\n"
             )
+
+        f.write(f" Feature   mindist	{mindist}\n")
 
         f.write("END_CFG\n")
         f.write("\n")
@@ -195,88 +193,3 @@ def cfg2atoms(file, symbols=None):
         atoms.set_calculator(calc)
 
         yield atoms
-
-
-def get_unique_element_from_cfg(cfg_file_path):
-    """Extract unique atomic elements from a CFG file.
-
-    This function reads atomic configurations from a CFG file, extracts
-    the chemical symbols for all atoms, and returns a sorted list of unique
-    elements present in the dataset.
-
-    Parameters:
-    ----------
-    cfg_file_path : Path
-        Path to the CFG file containing atomic configurations.
-
-    Returns:
-    -------
-    list
-        A sorted list of unique atomic elements found in the CFG file,
-        represented by their chemical symbols.
-    """
-    unique_symbols = []
-    for atoms in cfg2atoms(cfg_file_path):
-        sym = np.array(atoms.symbols)
-        unique_symbols += list(set(sym))
-
-    unique_element = np.array(list(set(unique_symbols)))
-    unique_element_sort = np.argsort(Atoms(unique_element).numbers)
-    return unique_element_sort.tolist()
-
-
-def get_unique_element_from_db(db_path):
-    """Extract unique atomic elements from a ase_db.
-
-    This function reads atomic configurations from a ase_db, extracts
-    the chemical symbols for all atoms, and returns a sorted list of unique
-    elements present in the dataset.
-
-    Parameters:
-    ----------
-    db_path : Path
-        Path to the ase_db containing atomic configurations.
-
-    Returns:
-    -------
-    list
-        A sorted list of unique atomic elements found in the ase_db,
-        represented by their chemical symbols.
-    """
-    db = connect(db_path)
-    unique_symbols = []
-    for row in db.select():
-        atoms = row.toatoms()
-        unique_symbols += list(set(atoms.symbols))
-
-    unique_symbols = list(set(unique_symbols))
-    sort_index = np.argsort(Atoms(unique_symbols).numbers)
-    unique_list_sorted = list(Atoms(unique_symbols)[sort_index].symbols)
-    ele_num = {ele: idx + 1 for idx, ele in enumerate(unique_list_sorted)}
-    return ele_num
-
-
-def find_mlip_dir():
-    """Finds the directory path for MLIP.
-
-    This function identifies the path to the MLIP directory
-    by searching the file structure for a 'mtp4py' repository
-    and loading the directory path from a JSON file.
-
-    Raises:
-    ------
-    FileNotFoundError
-        If the MLIP directory does not exist.
-
-    Returns:
-    -------
-    Path
-        A `Path` object pointing to the MLIP directory.
-    """
-    dict_paths = libsetter.data
-    path_mlip_dir = Path(dict_paths["path_to_mlip2"]["MLIP_DIR"])
-
-    if not path_mlip_dir.exists():
-        raise FileNotFoundError(f"MLIP directory not found: {path_mlip_dir}")
-
-    return path_mlip_dir
