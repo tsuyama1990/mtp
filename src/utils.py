@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 import numpy as np
-from ase import Atoms
+from ase import Atom, Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.cell import Cell
 from ase.db import connect
@@ -13,7 +13,7 @@ from src import libsetter
 
 
 def atoms2cfg(
-    atoms, file, ele_dict, bool_delta_learing=False, append=False, lammps_lj_calc=None
+    atoms, file, mindist, bool_delta_learing=False, append=False, lammps_lj_calc=None
 ):
     """Write the atomic configuration to a .cfg file.
 
@@ -23,6 +23,8 @@ def atoms2cfg(
         The atomic configuration to write to the file.
     file : str
         The file path where the configuration will be written.
+    mindist: float
+        The minimum distance of atoms.
     bool_delta_learing : bool, optional
         If True, calculate and write energy and forces
             subtracting Lennard-Jones potential as a first approximation.
@@ -92,7 +94,7 @@ def atoms2cfg(
         symbols = atoms.symbols
         for i in range(size):
             aid = i + 1
-            atype = ele_dict[symbols[i]]
+            atype = Atom(symbols[i]).number
             x, y, z = pos[i]
             if write_f:
                 force_x, force_y, force_z = forces[i]
@@ -117,7 +119,7 @@ def atoms2cfg(
                 stress = atoms.get_stress() * -atoms.get_volume()
 
         except Exception:
-            stress = np.array([0, 0, 0, 0, 0, 0])
+            write_stress = False
 
         if write_stress:
             f.write(
@@ -127,6 +129,8 @@ def atoms2cfg(
                 f"{stress[0]:.5f}    {stress[1]:.5f}    {stress[2]:.5f}    "
                 f"{stress[3]:.5f}    {stress[4]:.5f}    {stress[5]:.5f}\n"
             )
+
+        f.write(f" Feature   mindist	{mindist}\n")
 
         f.write("END_CFG\n")
         f.write("\n")
