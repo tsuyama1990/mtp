@@ -109,7 +109,7 @@ class MtpTraining:
             The command to run the training executable.
         """
         if self.num_para_cores == 1:
-            command = [
+            _command = [
                 str(self.exe_path),
                 "train",
                 str(self.trainer_path),
@@ -118,7 +118,7 @@ class MtpTraining:
                 f"--max-iter={iter_limit}",
             ]
         else:
-            command = [
+            _command = [
                 "mpirun -np",
                 f"{self.num_para_cores}",
                 str(self.exe_path),
@@ -128,9 +128,10 @@ class MtpTraining:
                 f"--trained-pot-name={self.output_path}",
                 f"--max-iter={iter_limit}",
             ]
+        command = " ".join(_command)
         print("The command to execute:")
         print(command)
-        return " ".join(command)
+        return command
 
     def run(self):
         """Run the training executable with the constructed command."""

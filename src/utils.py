@@ -127,7 +127,7 @@ def atoms2cfg(
                 f"{stress[0]:.5f}    {stress[1]:.5f}    {stress[2]:.5f}    "
                 f"{stress[3]:.5f}    {stress[4]:.5f}    {stress[5]:.5f}\n"
             )
-        f.write(" Feature")
+        f.write(" Feature\n")
 
         f.write("END_CFG\n")
         f.write("\n")
