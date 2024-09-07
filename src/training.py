@@ -22,38 +22,44 @@ class MtpTraining:
         Path to the CFG file.
     output_path : Path
         Path where the output will be saved.
-    trainer_setting_path : Path
-        Path to the training setting file.
+    trainer_setting_path : Path, optional
+        Path to the training setting file, if provided.
     exe_path : Path
         Path to the MLIP executable.
     trainer_path : Path
         Path to the generated or copied trainer file.
+    num_para_cores : int
+        Number of parallel cores for running the training.
     """
 
     def __init__(
         self,
         cfg_path: Path,
         output_path: Path,
+        num_para_cores: int = 1,
         iter_limit: int = 100,
         trainer_setting_path: Path | None = None,
         exe_path: Path | None = None,
     ):
         """Initialize the MtpTraining object.
 
-        Parameters:
+        Parameters
         ----------
         cfg_path : Path
             Path to the CFG file.
         output_path : Path
             Path where the output will be saved.
+        num_para_cores : int, optional
+            Number of parallel cores to use for training, default is 1.
         iter_limit : int, optional
-            Limit on the number of iterations, by default 100.
+            Limit on the number of iterations, default is 100.
         trainer_setting_path : Path, optional
-            Path to the training setting file.
+            Path to the training setting file, default is None.
         exe_path : Path, optional
-            Path to the MLIP executable.
+            Path to the MLIP executable, default is None.
         """
         self.cfg_path = cfg_path
+        self.num_para_cores = num_para_cores
         self.output_path = output_path
         self.trainer_setting_path = trainer_setting_path
 
@@ -67,9 +73,7 @@ class MtpTraining:
 
         self.edit_trainer_file()
 
-        self.command = self.build_command(
-            self.trainer_path, exe_path, cfg_path, output_path, iter_limit
-        )
+        self.command = self.build_command(iter_limit)
 
     def edit_trainer_file(self):
         """Edit or copy the trainer file.
@@ -90,24 +94,12 @@ class MtpTraining:
 
     def build_command(
         self,
-        setting_path: Path,
-        exe_path: Path,
-        cfg_path: Path,
-        output_path: Path,
         iter_limit: int,
     ) -> str:
         """Build the command string to run the training executable.
 
-        Parameters:
+        Parameters
         ----------
-        setting_path : Path
-            Path to the training setting file.
-        exe_path : Path
-            Path to the MLIP executable.
-        cfg_path : Path
-            Path to the CFG file.
-        output_path : Path
-            Path where the output will be saved.
         iter_limit : int
             Limit on the number of iterations.
 
@@ -116,19 +108,32 @@ class MtpTraining:
         str
             The command to run the training executable.
         """
-        command = [
-            str(exe_path),
-            "train",
-            str(setting_path),
-            str(cfg_path),
-            f"--trained-pot-name={output_path}",
-            f"--max-iter={iter_limit}",
-        ]
+        if self.num_para_cores == 1:
+            command = [
+                str(self.exe_path),
+                "train",
+                str(self.trainer_path),
+                str(self.cfg_path),
+                f"--trained-pot-name={self.output_path}",
+                f"--max-iter={iter_limit}",
+            ]
+        else:
+            command = [
+                "mpirun -np",
+                f"{self.num_para_cores}",
+                str(self.exe_path),
+                "train",
+                str(self.trainer_path),
+                str(self.cfg_path),
+                f"--trained-pot-name={self.output_path}",
+                f"--max-iter={iter_limit}",
+            ]
+        print("The command to execute:")
+        print(command)
         return " ".join(command)
 
     def run(self):
         """Run the training executable with the constructed command."""
-        print(self.command)
         subprocess.run(self.command, shell=True)
 
 
