@@ -234,7 +234,7 @@ class EditTrainerFile:
         eles = utils.get_unique_element_from_cfg(self.path_to_dataset)
         print("The elements included in the cfg file", eles)
         atoms = Atoms(list(eles))
-        return int(atoms.number.max()) + 1
+        return int(atoms.numbers.max())
 
     def generate_modified_input(self):
         """Generate the modified trainer input file."""
