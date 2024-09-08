@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 import numpy as np
-from ase import Atoms
+from ase import Atom, Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.cell import Cell
 from ase.db import connect
@@ -12,9 +12,7 @@ from ase.db import connect
 from src import libsetter
 
 
-def atoms2cfg(
-    atoms, file, ele_dict, bool_delta_learing=False, append=False, lammps_lj_calc=None
-):
+def atoms2cfg(atoms, file, bool_delta_learing=False, append=False, lammps_lj_calc=None):
     """Write the atomic configuration to a .cfg file.
 
     Parameters
@@ -92,7 +90,7 @@ def atoms2cfg(
         symbols = atoms.symbols
         for i in range(size):
             aid = i + 1
-            atype = ele_dict[symbols[i]]
+            atype = Atom(symbols[i]).number
             x, y, z = pos[i]
             if write_f:
                 force_x, force_y, force_z = forces[i]
@@ -117,7 +115,14 @@ def atoms2cfg(
                 stress = atoms.get_stress() * -atoms.get_volume()
 
         except Exception:
-            write_stress = False
+            virial_stress_x_vol = get_virial_x_vol(atoms)
+
+            if bool_delta_learing:
+                stress = (
+                    virial_stress_x_vol - lj_atoms.get_stress() * -lj_atoms.get_volume()
+                )
+            else:
+                stress = virial_stress_x_vol
 
         if write_stress:
             f.write(
@@ -127,10 +132,40 @@ def atoms2cfg(
                 f"{stress[0]:.5f}    {stress[1]:.5f}    {stress[2]:.5f}    "
                 f"{stress[3]:.5f}    {stress[4]:.5f}    {stress[5]:.5f}\n"
             )
-        f.write(" Feature\n")
 
         f.write("END_CFG\n")
         f.write("\n")
+
+
+def get_virial_x_vol(atoms):
+    """Get virial stress x volume with voigt style.
+
+    Parameters
+    ----------
+    atoms : Ase.atoms
+        Atoms to calculate the virial.
+    """
+    forces = atoms.get_forces()
+    positions = atoms.get_positions()
+    virial_stress_x_vol = np.zeros((3, 3))
+
+    for i in range(len(atoms)):
+        r = positions[i]
+        f = forces[i]
+
+        virial_stress_x_vol += np.outer(r, f)
+
+    virial_x_vol_voigt = np.array(
+        [
+            virial_stress_x_vol[0, 0],
+            virial_stress_x_vol[1, 1],
+            virial_stress_x_vol[2, 2],
+            virial_stress_x_vol[1, 2],
+            virial_stress_x_vol[0, 2],
+            virial_stress_x_vol[0, 1],
+        ]
+    )
+    return virial_x_vol_voigt
 
 
 def cfg2atoms(file, symbols=None):

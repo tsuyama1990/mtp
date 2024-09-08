@@ -4,6 +4,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from ase import Atoms
+
 from src import utils
 
 
@@ -39,6 +41,7 @@ class MtpTraining:
         num_para_cores: int = 1,
         iter_limit: int = 100,
         trainer_setting_path: Path | None = None,
+        base_trainer_name: str = "06.mtp",
         exe_path: Path | None = None,
     ):
         """Initialize the MtpTraining object.
@@ -55,6 +58,8 @@ class MtpTraining:
             Limit on the number of iterations, default is 100.
         trainer_setting_path : Path, optional
             Path to the training setting file, default is None.
+        base_trainer_name : Str:
+            The name of trainer file to use.
         exe_path : Path, optional
             Path to the MLIP executable, default is None.
         """
@@ -71,19 +76,24 @@ class MtpTraining:
             exe_path = mlip_path / "bin/mlp"
             self.exe_path = exe_path
 
-        self.edit_trainer_file()
+        self.edit_trainer_file(base_trainer_name)
 
         self.command = self.build_command(iter_limit)
 
-    def edit_trainer_file(self):
+    def edit_trainer_file(self, base_trainer_name):
         """Edit or copy the trainer file.
 
         Modifies the original trainer file or copies a provided trainer file
         to the output directory and stores the path for further use.
+
+        Parameters
+        ----------
+        base_trainer_name : Str:
+            The name of trainer file to use.
         """
         if self.trainer_setting_path is None:
             trainer_path = self.output_path.parent / "trainer.mtp"
-            edt = EditTrainerFile(self.cfg_path, trainer_path)
+            edt = EditTrainerFile(self.cfg_path, trainer_path, base_trainer_name)
             edt.generate_modified_input()
         else:
             trainer_path = self.output_path.parent / "trainer.mtp"
@@ -160,7 +170,7 @@ class EditTrainerFile:
         self,
         path_to_dataset: Path,
         output_file_path: Path,
-        path_to_original_trainer: Path | None = None,
+        base_trainer_name: str,
     ):
         """Initialize the EditTrainerFile object.
 
@@ -170,18 +180,16 @@ class EditTrainerFile:
             Path to the dataset used for training.
         output_file_path : Path
             Path where the modified trainer file will be saved.
-        path_to_original_trainer : Path, optional
-            Path to the original trainer file template, by default None.
+        base_trainer_name : str
+            The trainer name for default settings.
         """
         self.path_to_dataset = path_to_dataset
         self.output_file_path = output_file_path
 
         mlip_path = utils.find_mlip_dir()
-
-        if path_to_original_trainer is None:
-            path_to_original_trainer = mlip_path / "untrained_mtps/06.mtp"
-        self.path_to_original_trainer = path_to_original_trainer
-
+        self.path_to_original_trainer = (
+            mlip_path / f"untrained_mtps/{base_trainer_name}"
+        )
         self.exe_path = mlip_path / "bin/mlp"
 
     def get_mindist_command(self) -> str:
@@ -225,7 +233,8 @@ class EditTrainerFile:
         """
         eles = utils.get_unique_element_from_cfg(self.path_to_dataset)
         print("The elements included in the cfg file", eles)
-        return len(eles)
+        atoms = Atoms(list(eles))
+        return int(atoms.number.max()) + 1
 
     def generate_modified_input(self):
         """Generate the modified trainer input file."""
